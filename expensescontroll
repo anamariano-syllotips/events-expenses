@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Expenses — Syllotips</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gridjs@5.0.2/dist/gridjs.umd.js" integrity="sha384-/XXDzxe4FsGiAe50i/u9pY/Vy/uX654MHB1xoc1BJNnH1WXHhqHga9g3q5tF4gj7" crossorigin="anonymous"></script>
+  <style>
+    :root { color-scheme: light; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f4f5f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #0f1b4c;
+      color: white;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.2px; }
+    .header-left p  { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #3a5ce7; }
+    .btn-secondary {
+      padding: 9px 18px;
+      border-radius: 8px;
+      border: 1.5px solid #e0e0e0;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      color: #444;
+    }
+    .btn-secondary:hover { background: #f5f5f5; }
+
+    /* ── Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      padding: 20px 28px 0;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      border-top: 3px solid transparent;
+    }
+    .card:nth-child(1) { border-top-color: #4a6cf7; }
+    .card:nth-child(2) { border-top-color: #f7934a; }
+    .card:nth-child(3) { border-top-color: #4af7a3; }
+    .card:nth-child(4) { border-top-color: #f74a6c; }
+    .card-label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    .card-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-top: 6px;
+      letter-spacing: -0.5px;
+    }
+    .card-sub { font-size: 12px; color: #aaa; margin-top: 4px; }
+
+    /* ── Tabs ── */
+    .tabs-row {
+      display: flex;
+      gap: 2px;
+      padding: 20px 28px 0;
+    }
+    .tab {
+      padding: 9px 18px;
+      border-radius: 8px 8px 0 0;
+      font-size: 13px;
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #777;
+      font-weight: 400;
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: white;
+      border-color: #e2e2e8;
+      border-bottom-color: white;
+      color: #1a1a2e;
+      font-weight: 500;
+    }
+    .tab:hover:not(.active) { background: #ececf5; color: #444; }
+
+    /* ── Tab content ── */
+    .tab-content {
+      margin: 0 28px 28px;
+      background: white;
+      border-radius: 0 12px 12px 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      min-height: 360px;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Section titles ── */
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin-bottom: 14px;
+    }
+
+    /* ── Charts ── */
+    .chart-row {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 28px;
+    }
+    .chart-box { position: relative; height: 260px; }
+
+    /* ── Summary tables ── */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .summary-table th {
+      background: #f4f5f9;
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #777;
+      font-weight: 500;
+    }
+    .summary-table td { padding: 10px 12px; border-top: 1px solid #f0f0f0; }
+    .summary-table tfoot td {
+      font-weight: 700;
+      background: #f8f8ff;
+      border-top: 2px solid #e8e8f0;
+    }
+    .amount-cell { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .pct-cell { color: #999; font-size: 12px; text-align: right; }
+
+    /* ── Event colour dots ── */
+    .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 7px;
+      vertical-align: middle;
+    }
+
+    /* ── Edit & toggle buttons ── */
+    .edit-btn {
+      background: none;
+      border: 1.5px solid #e2e2e8;
+      border-radius: 6px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #888;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .edit-btn:hover { border-color: #4a6cf7; color: #4a6cf7; background: #f0f2ff; }
+    .status-toggle {
+      cursor: pointer;
+      transition: opacity 0.15s;
+      display: inline-block;
+    }
+    .status-toggle:hover { opacity: 0.75; }
+
+    /* ── Grid.js overrides ── */
+    .gridjs-container { font-size: 13px !important; }
+    .gridjs-wrapper { border: none !important; box-shadow: none !important; }
+    td.gridjs-td { padding: 10px 14px !important; border-color: #f0f0f0 !important; }
+    th.gridjs-th {
+      background: #f4f5f9 !important;
+      color: #777 !important;
+      font-size: 11px !important;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-color: #e8e8f0 !important;
+    }
+    .gridjs-tr:hover td { background: #f9f9ff !important; }
+    .gridjs-search input {
+      border: 1.5px solid #e2e2e8 !important;
+      border-radius: 8px !important;
+      padding: 7px 12px !important;
+      font-size: 13px !important;
+      outline: none;
+    }
+    .gridjs-search input:focus { border-color: #4a6cf7 !important; }
+    .gridjs-pagination { font-size: 12px !important; }
+    .gridjs-pages button { border-radius: 6px !important; }
+    .gridjs-pages button.gridjs-currentPage { background: #4a6cf7 !important; color: white !important; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 280px;
+      color: #bbb;
+      text-align: center;
+    }
+    .empty-state svg { margin-bottom: 14px; }
+    .empty-state strong { display: block; font-size: 15px; color: #888; margin-bottom: 6px; }
+    .empty-state span { font-size: 13px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,27,76,0.45);
+      z-index: 9000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 32px;
+      width: 500px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 22px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .form-group input, .form-group select {
+      padding: 9px 12px;
+      border: 1.5px solid #e2e2e8;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      color: #1a1a2e;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #4a6cf7; }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 22px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #f0f2ff;
+      color: #4a6cf7;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    footer {
+      padding: 16px 28px;
+      font-size: 11px;
+      color: #ccc;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <h1>📊 Event Expenses</h1>
+    <p>Syllotips · Track costs by invoice, event &amp; month</p>
+  </div>
+  <button class="btn-primary" onclick="openModal()">+ Add Expense</button>
+</div>
+
+<!-- ── Summary Cards ──────────────────────────────────── -->
+<div class="cards">
+  <div class="card">
+    <div class="card-label">Total Spent</div>
+    <div class="card-value" id="c-total">€0</div>
+    <div class="card-sub" id="c-invoices">0 invoices</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Events Tracked</div>
+    <div class="card-value" id="c-events">0</div>
+    <div class="card-sub">unique events</div>
+  </div>
+  <div class="card">
+    <div class="card-label">This Month</div>
+    <div class="card-value" id="c-month">€0</div>
+    <div class="card-sub" id="c-month-label">—</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Top Event</div>
+    <div class="card-value" id="c-top-val">€0</div>
+    <div class="card-sub" id="c-top-name">—</div>
+  </div>
+  <div class="card" style="border-top-color:#f7934a">
+    <div class="card-label">⏳ Pending</div>
+    <div class="card-value" id="c-pending" style="color:#f7934a">—</div>
+    <div class="card-sub" id="c-pending-count">0 invoices</div>
+  </div>
+</div>
+
+<!-- ── Tabs ───────────────────────────────────────────── -->
+<div class="tabs-row" style="margin-top:20px;">
+  <button class="tab active" id="btn-all"   onclick="switchTab('all',   this)">All Expenses</button>
+  <button class="tab"        id="btn-month" onclick="switchTab('month', this)">By Month</button>
+  <button class="tab"        id="btn-event" onclick="switchTab('event', this)">By Event</button>
+</div>
+
+<!-- ── Tab Content ────────────────────────────────────── -->
+<div class="tab-content">
+
+  <!-- ALL EXPENSES -->
+  <div class="tab-panel active" id="tab-all">
+    <div id="grid-container"></div>
+  </div>
+
+  <!-- BY MONTH -->
+  <div class="tab-panel" id="tab-month">
+    <div class="chart-row">
+      <div>
+        <div class="section-title">Monthly Spend</div>
+        <div class="chart-box"><canvas id="monthChart"></canvas></div>
+      </div>
+      <div>
+        <div class="section-title">Month Breakdown</div>
+        <div id="month-table-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BY EVENT -->
+  <div class="tab-panel" id="tab-event">
+    <div class="chart-row">
+      <div>
+        <div class="section-title">Spend by Event</div>
+        <div class="chart-box"><canvas id="eventChart"></canvas></div>
+      </div>
+      <div>
+        <div class="section-title">Event Breakdown</div>
+        <div id="event-table-container"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Syllotips · Event Expenses Dashboard · Send invoices to Claude to update this dashboard</footer>
+
+<!-- ── Add Expense Modal ──────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="onOverlayClick(event)">
+  <div class="modal">
+    <h2 id="modal-title">Add Expense</h2>
+    <input type="hidden" id="f-edit-id" value="">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Date *</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>Amount *</label>
+        <input type="number" id="f-amount" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-group" style="display:none" id="fg-currency-placeholder"></div>
+      <div class="form-group full">
+        <label>Event Name <span style="font-weight:400;color:#aaa">(optional)</span></label>
+        <input type="text" id="f-event" placeholder="e.g. Netcomm Forum 2026 — leave blank if not event-related" list="event-list">
+        <datalist id="event-list"></datalist>
+      </div>
+      <div class="form-group full">
+        <label>Invoice Issuer *</label>
+        <input type="text" id="f-issuer" placeholder="e.g. Fiera Milano S.p.A.">
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <select id="f-currency">
+          <option value="USD">USD – US Dollar</option>
+          <option value="EUR">EUR – Euro</option>
+          <option value="GBP">GBP – British Pound</option>
+          <option value="CHF">CHF – Swiss Franc</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Payment Method</label>
+        <select id="f-payment">
+          <option value="Card">Card</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+          <option value="Cash">Cash</option>
+          <option value="Reimbursement">Reimbursement</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="Paid">✓ Paid</option>
+          <option value="Pending">⏳ Pending</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="f-category" placeholder="e.g. Booth, Travel…" list="cat-list">
+        <datalist id="cat-list">
+          <option value="Booth / Stand">
+          <option value="Travel">
+          <option value="Hotel">
+          <option value="Catering">
+          <option value="Print / Materials">
+          <option value="Print / Signage">
+          <option value="Shipping / Logistics">
+          <option value="Registration Fee">
+          <option value="Sponsorship">
+          <option value="AV / Tech">
+          <option value="Other">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>Invoice #</label>
+        <input type="text" id="f-invoice-no" placeholder="e.g. INV-2026-001">
+      </div>
+      <div class="form-group full">
+        <label>Notes</label>
+        <input type="text" id="f-notes" placeholder="Optional notes">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary"   onclick="submitExpense()">Save Expense</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  DATA — Claude updates this array as invoices are provided
+// ═══════════════════════════════════════════════════════════
+let EXPENSES = [
+  // Each entry: { id, date, event, amount, currency, issuer, category, invoiceNo, paymentMethod, status, notes }
+  { id:1,  date:"2026-05-05", event:"MIT CIO Symposium",                    amount:75.00,    currency:"USD", issuer:"MIT Sloan Boston Alumni Association Inc",  category:"Registration Fee", invoiceNo:"EM3UBX0T-0001", paymentMethod:"Card",          status:"Paid",    notes:"Innovator Plan Annual membership – Giorgio Barnabò" },
+  { id:2,  date:"2026-05-07", event:"MIT CIO Symposium",                    amount:2028.00,  currency:"USD", issuer:"MIT Sloan CIO Symposium (via Eventbrite)", category:"Registration Fee", invoiceNo:"Order #302",     paymentMethod:"Card",          status:"Paid",    notes:"2 exec tickets: Jordan Shultz $1,349 + Giorgio Barnabò $679" },
+  { id:3,  date:"2026-04-30", event:"Netcomm Forum",                        amount:256.20,   currency:"EUR", issuer:"TIGEvents",                               category:"Registration Fee", invoiceNo:"0000088/E",      paymentMethod:"Card",          status:"Paid",    notes:"1 ticket – €210.00 + IVA 22% (€46.20)" },
+  { id:4,  date:"2026-04-30", event:"IDC AI & Data Summit 2026",            amount:22500.00, currency:"USD", issuer:"IDC Research, Inc",                       category:"Sponsorship",      invoiceNo:"3653991",        paymentMethod:"Bank Transfer", status:"Paid",    notes:"Sponsorship – San Francisco, Jun 2026. Contract IDC1000000052546" },
+  { id:5,  date:"2026-05-07", event:"Customer Contact Week Las Vegas 2026", amount:10998.00, currency:"USD", issuer:"Customer Management Practice, LLC",       category:"Registration Fee", invoiceNo:"#27986422",      paymentMethod:"Bank Transfer", status:"Paid",    notes:"2 Vendor tickets × $5,499 – via Bizzabo" },
+  { id:6,  date:"2026-04-13", event:"Forum IT", amount:366.00,  currency:"EUR", issuer:"Graphidea S.r.l.",    category:"Print / Materials", invoiceNo:"1637",       paymentMethod:"Bank Transfer", status:"Paid", notes:"30 brochures – €300.00 + IVA 22% (€66.00)" },
+  { id:7,  date:"2026-04-08", event:"Forum IT", amount:904.02,  currency:"EUR", issuer:"Pubblicittà S.r.l.", category:"Print / Materials", invoiceNo:"231/2026",   paymentMethod:"Bank Transfer", status:"Paid", notes:"Rollup 85x200 (€76) + Rollup 240x200 (€420) + 1.000 sticker adesivo specchio (€150) + 500 flyer 170gr (€95) – €741.00 + IVA 22% (€163.02)" },
+  { id:8,  date:"2026-04-13", event:"Forum IT", amount:91.50,   currency:"EUR", issuer:"Pubblicittà S.r.l.", category:"Print / Materials", invoiceNo:"241/2026",   paymentMethod:"Bank Transfer", status:"Paid", notes:"250 biglietti da visita f/r laminazione opaca – €75.00 + IVA 22% (€16.50)" },
+  // ── Added 01 Jul 2026 ──
+  { id:9,  date:"2026-06-30", event:"Wave by Vento", amount:3259.09, currency:"EUR", issuer:"Vento srl", category:"Registration Fee", invoiceNo:"8965 / 8966 / 8971", paymentMethod:"Card", status:"Paid", notes:"12 × Super Early Bird - Startup Pass + 3 × UPGRADE VIP – Promo VENTOPORTCO-15 (-15%)" },
+  { id:12, date:"2026-06-30", event:"",              amount:97.60,   currency:"EUR", issuer:"mytaxi Italia S.r.l. (Freenow)", category:"Travel", invoiceNo:"DSOH2K-2 / DSRCHD-2", paymentMethod:"Card", status:"Paid", notes:"2 taxi rides in Roma for Gadgets transport" },
+  { id:14, date:"2026-06-24", event:"",              amount:475.80,  currency:"EUR", issuer:"Top Shirt di Walter Volponi", category:"Print / Materials", invoiceNo:"Preventivo 829", paymentMethod:"Bank Transfer", status:"Paid", notes:"30 T-shirt B&C bianche cotone organico + stampa A4 fronte (XS:1 S:4 M:13 L:7 XL:5) + 1 campione tote bag chocolate c/stampa f/r – €390.00 + IVA 22% (€85.80)" },
+  { id:15, date:"2026-06-12", event:"",              amount:1273.68, currency:"EUR", issuer:"Alisea S.r.l. Società Benefit", category:"Print / Materials", invoiceNo:"ODV26-0199", paymentMethod:"Bank Transfer", status:"Paid", notes:"200 Perpetua pencils laser-engraved (4 colors × 50 pcs: BLU/BRONZO/GIALLO/ARANCIONE) + impianto laser + layout grafico + spese trasporto – €1,044.00 + IVA 22% (€229.68)" },
+  { id:16, date:"2026-05-12", event:"AI Week Milano", amount:798.00, currency:"EUR", issuer:"Intelligenza Artificiale Spiegata Semplice s.r.l.", category:"Registration Fee", invoiceNo:"3224/2026/02/2026", paymentMethod:"Card", status:"Paid", notes:"2 × Ticket AI WEEK 2026 Business – Fiera Milano Rho, 19-20 Maggio 2026 – €654.10 + IVA 22% (€143.90)" },
+  { id:17, date:"2026-05-22", event:"", amount:207.40, currency:"EUR", issuer:"Graphidea S.r.l.", category:"Print / Materials", invoiceNo:"2517", paymentMethod:"Bank Transfer", status:"Paid", notes:"100 business cards f/r pat. opaca 350gr + soft touch laminazione + rounded corners + 1 rollup completo di sacca e struttura – €170.00 + IVA 22% (€37.40)" },
+  { id:18, date:"2026-06-01", event:"IDC AI & Data Summit 2026", amount:367.42, currency:"USD", issuer:"100 Stockton St Location, LLC (Convene | etc. venues)", category:"Booth / Stand", invoiceNo:"DEPINV-INV66121", paymentMethod:"Card", status:"Paid", notes:"Contracted Deposit 1 – Exhibitor booth at Convene 100 Stockton, San Francisco (monitor rental for booth) – Booking #SFC-100-00461782, event date 06/04/2026" },
+  { id:19, date:"2026-06-12", event:"", amount:3.28, currency:"EUR", issuer:"StickerApp AB", category:"Print / Materials", invoiceNo:"#4138622", paymentMethod:"Card", status:"Paid", notes:"2 sticker sample packs × €1.64 – VAT 0% (EU B2B)" },
+  { id:20, date:"2026-06-01", event:"IDC AI & Data Summit 2026", amount:271.57, currency:"USD", issuer:"AlphaGraphics SF Mission", category:"Print / Materials", invoiceNo:"72339", paymentMethod:"Card", status:"Paid", notes:"1 × rollup banner 33×80 Briteline Film Matte + Value Bannerstand Silver – $223.06 + tax $19.24 + shipping $29.27" },
+  { id:21, date:"2026-06-17", event:"AI Conference Milano", amount:135.20, currency:"EUR", issuer:"—", category:"Registration Fee", invoiceNo:"—", paymentMethod:"Card", status:"Paid", notes:"Tickets – no invoice available. Transaction 17/06/2026 09:58" },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  Helpers
+// ═══════════════════════════════════════════════════════════
+const PALETTE = [
+  '#4a6cf7','#f7934a','#22c98a','#f74a6c',
+  '#a34af7','#f7c94a','#4acff7','#f74af0',
+  '#7af74a','#f7514a'
+];
+const _eventColorMap = {};
+function colorFor(ev) {
+  if (!_eventColorMap[ev]) {
+    _eventColorMap[ev] = PALETTE[Object.keys(_eventColorMap).length % PALETTE.length];
+  }
+  return _eventColorMap[ev];
+}
+
+function statusBadge(s) {
+  if (!s || s === '—') return '<span style="color:#ccc">—</span>';
+  const isPaid = s === 'Paid';
+  const color  = isPaid ? '#22c98a' : '#f7934a';
+  const icon   = isPaid ? '✓' : '⏳';
+  return `<span style="display:inline-flex;align-items:center;gap:4px;background:${color}18;color:${color};border:1px solid ${color}55;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap">${icon} ${s}</span>`;
+}
+
+const PAYMENT_COLORS = {
+  'Card':         '#4a6cf7',
+  'Bank Transfer':'#22c98a',
+  'Cash':         '#f7934a',
+  'Reimbursement':'#a34af7',
+};
+function paymentBadge(method) {
+  if (!method || method === '—') return '<span style="color:#ccc">—</span>';
+  const color = PAYMENT_COLORS[method] || '#888';
+  return `<span style="display:inline-block;background:${color}18;color:${color};border:1px solid ${color}44;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap">${method}</span>`;
+}
+
+const CURRENCY_SYMBOLS = { EUR: '€', USD: '$', GBP: '£', CHF: 'CHF ' };
+function fmt(n, currency) {
+  const sym = CURRENCY_SYMBOLS[currency] || (currency ? currency + ' ' : '$');
+  const locale = (currency === 'EUR') ? 'it-IT' : 'en-US';
+  return sym + Number(n).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+// Group totals by currency
+function totalsByCurrency(list) {
+  const map = {};
+  list.forEach(e => { const c = e.currency || 'USD'; map[c] = (map[c]||0) + e.amount; });
+  return map;
+}
+function fmtTotals(map) {
+  return Object.entries(map).map(([c,v]) => fmt(v, c)).join(' + ') || '—';
+}
+function monthKey(d)   { return d.slice(0, 7); }
+function monthLabel(k) {
+  const [y, m] = k.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleString('en', { month: 'long', year: 'numeric' });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Cards
+// ═══════════════════════════════════════════════════════════
+function updateCards() {
+  const events   = [...new Set(EXPENSES.map(e => e.event || 'General'))];
+  const now      = new Date();
+  const curKey   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const thisMonthExp = EXPENSES.filter(e => monthKey(e.date) === curKey);
+
+  // Top event by amount (same currency grouping)
+  const byEvent  = {};
+  EXPENSES.forEach(e => { const k = e.event || 'General'; byEvent[k] = (byEvent[k]||0) + e.amount; });
+  const top = Object.entries(byEvent).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('c-total').textContent    = fmtTotals(totalsByCurrency(EXPENSES));
+  document.getElementById('c-invoices').textContent = EXPENSES.length + ' invoice' + (EXPENSES.length !== 1 ? 's' : '');
+  document.getElementById('c-events').textContent   = events.length;
+  document.getElementById('c-month').textContent    = thisMonthExp.length ? fmtTotals(totalsByCurrency(thisMonthExp)) : '—';
+  document.getElementById('c-month-label').textContent = now.toLocaleString('en', { month: 'long', year: 'numeric' });
+  document.getElementById('c-top-val').textContent  = top ? fmtTotals(totalsByCurrency(EXPENSES.filter(e=>(e.event||'General')===top[0]))) : '—';
+  document.getElementById('c-top-name').textContent = top ? top[0] : '—';
+
+  const pendingExp = EXPENSES.filter(e => e.status === 'Pending');
+  document.getElementById('c-pending').textContent       = pendingExp.length ? fmtTotals(totalsByCurrency(pendingExp)) : '—';
+  document.getElementById('c-pending-count').textContent = pendingExp.length + ' invoice' + (pendingExp.length !== 1 ? 's' : '') + ' to pay';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  All Expenses tab (Grid.js)
+// ═══════════════════════════════════════════════════════════
+let _grid = null;
+function renderGrid() {
+  const container = document.getElementById('grid-container');
+  if (_grid) { try { _grid.destroy(); } catch(e){} _grid = null; }
+  container.innerHTML = '';
+
+  if (EXPENSES.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M3 9h18M8 4v5M16 4v5"/>
+        </svg>
+        <strong>No expenses yet</strong>
+        <span>Upload invoices to Claude or click "+ Add Expense" to get started.</span>
+      </div>`;
+    return;
+  }
+
+  const rows = [...EXPENSES]
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .map(e => [
+      e.date,
+      e.event          || '—',
+      e.issuer,
+      e.category       || '—',
+      e.invoiceNo      || '—',
+      e.status         || '—',
+      e.paymentMethod  || '—',
+      e.notes          || '—',
+      e.currency       || 'USD',
+      e.amount,
+      e.id,   // index 10 — used by status toggle and edit button
+    ]);
+
+  _grid = new gridjs.Grid({
+    columns: [
+      { name: 'Date',            width: '100px' },
+      { name: 'Event',           width: '160px' },
+      { name: 'Invoice Issuer' },
+      { name: 'Category',        width: '125px' },
+      { name: 'Invoice #',       width: '110px' },
+      {
+        name: 'Status', width: '108px',
+        formatter: (cell, row) => gridjs.html(
+          `<span class="status-toggle" title="Click to toggle" onclick="toggleStatus(${row.cells[10].data})">${statusBadge(cell)}</span>`
+        )
+      },
+      { name: 'Payment',  width: '110px', formatter: (cell) => gridjs.html(paymentBadge(cell)) },
+      { name: 'Notes' },
+      { name: 'CCY',      width: '54px'  },
+      {
+        name: 'Amount', width: '118px',
+        formatter: (cell, row) => gridjs.html(`<span class="amount-cell">${fmt(cell, row.cells[8].data)}</span>`)
+      },
+      {
+        id: 'edit-col', name: '', width: '48px', sort: false,
+        formatter: (cell) => gridjs.html(`<button class="edit-btn" title="Edit" onclick="openEditModal(${cell})">✏️</button>`)
+      },
+    ],
+    data: rows,
+    search: true,
+    sort:   true,
+    pagination: { limit: 15, summary: false },
+  }).render(container);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  By Month tab
+// ═══════════════════════════════════════════════════════════
+let _monthChart = null;
+function renderMonthTab() {
+  const byMonth = {};
+  EXPENSES.forEach(e => { const k = monthKey(e.date); byMonth[k] = (byMonth[k]||0) + e.amount; });
+  const keys   = Object.keys(byMonth).sort();
+  const labels = keys.map(k => monthLabel(k));
+  const values = keys.map(k => byMonth[k]);
+  const total  = values.reduce((a,b) => a+b, 0);
+
+  const ctx = document.getElementById('monthChart').getContext('2d');
+  if (_monthChart) { _monthChart.destroy(); _monthChart = null; }
+
+  if (keys.length === 0) {
+    document.getElementById('month-table-container').innerHTML =
+      '<p style="color:#bbb;font-size:13px;padding:20px 0;">No data yet.</p>';
+    return;
+  }
+
+  _monthChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Expenses',
+        data: values,
+        backgroundColor: '#4a6cf7',
+        borderRadius: 7,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + c.parsed.y.toLocaleString() } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() }, grid: { color: '#f0f0f0' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  const tableRows = keys.map((k, i) => {
+    const monthExp = EXPENSES.filter(e => monthKey(e.date) === k);
+    const totStr = fmtTotals(totalsByCurrency(monthExp));
+    return `<tr>
+      <td>${labels[i]}</td>
+      <td class="amount-cell" style="text-align:right">${totStr}</td>
+      <td class="pct-cell">${total > 0 ? Math.round(values[i]/total*100) : 0}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('month-table-container').innerHTML = `
+    <table class="summary-table">
+      <thead><tr><th>Month</th><th style="text-align:right">Amount</th><th style="text-align:right">Share</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+      <tfoot><tr><td>Total</td><td class="amount-cell" style="text-align:right">${fmtTotals(totalsByCurrency(EXPENSES))}</td><td class="pct-cell">100%</td></tr></tfoot>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  By Event tab
+// ═══════════════════════════════════════════════════════════
+let _eventChart = null;
+function renderEventTab() {
+  const byEvent = {};
+  EXPENSES.forEach(e => { const k = e.event || 'General'; byEvent[k] = (byEvent[k]||0) + e.amount; });
+  const sorted = Object.entries(byEvent).sort((a,b) => b[1]-a[1]);
+  const labels = sorted.map(([k]) => k);
+  const values = sorted.map(([,v]) => v);
+  const colors = labels.map(l => colorFor(l));
+  const total  = values.reduce((a,b) => a+b, 0);
+
+  const ctx = document.getElementById('eventChart').getContext('2d');
+  if (_eventChart) { _eventChart.destroy(); _eventChart = null; }
+
+  if (sorted.length === 0) {
+    document.getElementById('event-table-container').innerHTML =
+      '<p style="color:#bbb;font-size:13px;padding:20px 0;">No data yet.</p>';
+    return;
+  }
+
+  _eventChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12, usePointStyle: true } },
+        tooltip: { callbacks: { label: c => ' ' + fmt(c.parsed) + '  (' + Math.round(c.parsed/total*100) + '%)' } }
+      }
+    }
+  });
+
+  const eventRows = sorted.map(([name, val], i) => {
+    const evExp = EXPENSES.filter(e => (e.event || 'General') === name);
+    const totStr = fmtTotals(totalsByCurrency(evExp));
+    return `<tr>
+      <td><span class="dot" style="background:${colors[i]}"></span>${name}</td>
+      <td class="amount-cell" style="text-align:right">${totStr}</td>
+      <td class="pct-cell">${total > 0 ? Math.round(val/total*100) : 0}%</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('event-table-container').innerHTML = `
+    <table class="summary-table">
+      <thead><tr><th>Event</th><th style="text-align:right">Amount</th><th style="text-align:right">Share</th></tr></thead>
+      <tbody>${eventRows}</tbody>
+      <tfoot><tr><td>Total</td><td class="amount-cell" style="text-align:right">${fmtTotals(totalsByCurrency(EXPENSES))}</td><td class="pct-cell">100%</td></tr></tfoot>
+    </table>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Tab switching
+// ═══════════════════════════════════════════════════════════
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'month') renderMonthTab();
+  if (name === 'event') renderEventTab();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Status toggle (click badge in table)
+// ═══════════════════════════════════════════════════════════
+function toggleStatus(id) {
+  const entry = EXPENSES.find(e => e.id === id);
+  if (!entry) return;
+  entry.status = entry.status === 'Paid' ? 'Pending' : 'Paid';
+  refresh();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Modal — Add & Edit
+// ═══════════════════════════════════════════════════════════
+function _populateEventList() {
+  const evList = document.getElementById('event-list');
+  evList.innerHTML = '';
+  [...new Set(EXPENSES.map(e => e.event).filter(Boolean))].forEach(ev => {
+    const o = document.createElement('option'); o.value = ev; evList.appendChild(o);
+  });
+}
+
+function _setSelect(id, val) {
+  const el = document.getElementById(id);
+  for (let opt of el.options) { if (opt.value === val) { el.value = val; return; } }
+}
+
+function openModal() {
+  _populateEventList();
+  document.getElementById('modal-title').textContent = 'Add Expense';
+  document.getElementById('f-edit-id').value = '';
+  document.getElementById('f-date').value    = new Date().toISOString().slice(0,10);
+  ['f-amount','f-event','f-issuer','f-category','f-invoice-no','f-notes']
+    .forEach(id => document.getElementById(id).value = '');
+  _setSelect('f-currency', 'USD');
+  _setSelect('f-payment',  'Card');
+  _setSelect('f-status',   'Paid');
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const e = EXPENSES.find(x => x.id === id);
+  if (!e) return;
+  _populateEventList();
+  document.getElementById('modal-title').textContent  = 'Edit Expense';
+  document.getElementById('f-edit-id').value          = e.id;
+  document.getElementById('f-date').value             = e.date;
+  document.getElementById('f-amount').value           = e.amount;
+  document.getElementById('f-event').value            = e.event    || '';
+  document.getElementById('f-issuer').value           = e.issuer   || '';
+  document.getElementById('f-category').value         = e.category || '';
+  document.getElementById('f-invoice-no').value       = e.invoiceNo|| '';
+  document.getElementById('f-notes').value            = e.notes    || '';
+  _setSelect('f-currency', e.currency      || 'USD');
+  _setSelect('f-payment',  e.paymentMethod || 'Card');
+  _setSelect('f-status',   e.status        || 'Paid');
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+function onOverlayClick(e) { if (e.target === document.getElementById('modal')) closeModal(); }
+
+function submitExpense() {
+  const date          = document.getElementById('f-date').value;
+  const amount        = parseFloat(document.getElementById('f-amount').value);
+  const currency      = document.getElementById('f-currency').value;
+  const paymentMethod = document.getElementById('f-payment').value;
+  const status        = document.getElementById('f-status').value;
+  const event         = document.getElementById('f-event').value.trim();
+  const issuer        = document.getElementById('f-issuer').value.trim();
+  const category      = document.getElementById('f-category').value.trim();
+  const invoiceNo     = document.getElementById('f-invoice-no').value.trim();
+  const notes         = document.getElementById('f-notes').value.trim();
+  const editId        = document.getElementById('f-edit-id').value;
+
+  if (!date || isNaN(amount) || !issuer) {
+    alert('Please fill in Date, Amount, and Invoice Issuer.');
+    return;
+  }
+
+  if (editId) {
+    // Update existing entry
+    const idx = EXPENSES.findIndex(e => e.id === Number(editId));
+    if (idx !== -1) {
+      EXPENSES[idx] = { ...EXPENSES[idx], date, event, amount, currency, issuer, category, invoiceNo, paymentMethod, status, notes };
+    }
+  } else {
+    // Add new entry
+    EXPENSES.push({ id: Date.now(), date, event, amount, currency, issuer, category, invoiceNo, paymentMethod, status, notes });
+  }
+
+  closeModal();
+  refresh();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Full refresh
+// ═══════════════════════════════════════════════════════════
+function refresh() {
+  updateCards();
+  renderGrid();
+  // Refresh whichever tab is visible
+  if (document.getElementById('tab-month').classList.contains('active')) renderMonthTab();
+  if (document.getElementById('tab-event').classList.contains('active')) renderEventTab();
+}
+
+// ── Init ──────────────────────────────────────────────────
+refresh();
+</script>
+
+</body>
+</html>
